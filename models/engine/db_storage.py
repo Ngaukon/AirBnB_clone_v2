@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 """
-Contains the class DBStorage for interacting with a MySQL database
+Contains the class DBStorage
 """
 
 import models
@@ -16,10 +16,9 @@ import sqlalchemy
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 
-# Mapping of class names to class objects
+# Mapping of class names to class types
 classes = {"Amenity": Amenity, "City": City,
            "Place": Place, "Review": Review, "State": State, "User": User}
-
 
 class DBStorage:
     """Interacts with the MySQL database"""
@@ -28,35 +27,24 @@ class DBStorage:
     __session = None
 
     def __init__(self):
-        """Instantiates a DBStorage object and sets up the database connection"""
+        """Instantiate a DBStorage object"""
         HBNB_MYSQL_USER = getenv('HBNB_MYSQL_USER')
         HBNB_MYSQL_PWD = getenv('HBNB_MYSQL_PWD')
         HBNB_MYSQL_HOST = getenv('HBNB_MYSQL_HOST')
         HBNB_MYSQL_DB = getenv('HBNB_MYSQL_DB')
         HBNB_ENV = getenv('HBNB_ENV')
-
-        # Create the database engine
-        self.__engine = create_engine(
-            'mysql+mysqldb://{}:{}@{}/{}'.format(
-                HBNB_MYSQL_USER,
-                HBNB_MYSQL_PWD,
-                HBNB_MYSQL_HOST,
-                HBNB_MYSQL_DB
-            )
-        )
-
-        # If environment is 'test', drop all tables
+        self.__engine = create_engine('mysql+mysqldb://{}:{}@{}/{}'.
+                                      format(HBNB_MYSQL_USER,
+                                             HBNB_MYSQL_PWD,
+                                             HBNB_MYSQL_HOST,
+                                             HBNB_MYSQL_DB))
         if HBNB_ENV == "test":
             Base.metadata.drop_all(self.__engine)
 
     def all(self, cls=None):
-        """Queries the current database session and returns a dictionary of all objects
-
-        Args:
-            cls (type or str, optional): The class type or class name to filter objects by. If None, returns all objects.
-
-        Returns:
-            dict: Dictionary of objects with keys in format <class name>.id
+        """
+        Queries the current database session. If a class is provided, returns
+        only objects of that class. Otherwise, returns all objects.
         """
         new_dict = {}
         for clss in classes:
@@ -68,33 +56,37 @@ class DBStorage:
         return new_dict
 
     def new(self, obj):
-        """Adds a new object to the current database session
-
-        Args:
-            obj (BaseModel): The object to add to the session
+        """
+        Adds the object to the current database session.
         """
         self.__session.add(obj)
 
     def save(self):
-        """Commits all changes to the current database session"""
+        """
+        Commits all changes of the current database session.
+        """
         self.__session.commit()
 
     def delete(self, obj=None):
-        """Deletes an object from the current database session if it is not None
-
-        Args:
-            obj (BaseModel, optional): The object to delete
+        """
+        Deletes obj from the current database session if obj is not None.
         """
         if obj is not None:
             self.__session.delete(obj)
 
     def reload(self):
-        """Creates tables in the database and sets up a new session"""
+        """
+        Reloads data from the database by creating all tables and initializing
+        a new session.
+        """
         Base.metadata.create_all(self.__engine)
         sess_factory = sessionmaker(bind=self.__engine, expire_on_commit=False)
         Session = scoped_session(sess_factory)
         self.__session = Session
 
     def close(self):
-        """Closes the current database session"""
+        """
+        Closes the current session by calling the remove() method on the
+        private session attribute.
+        """
         self.__session.remove()
